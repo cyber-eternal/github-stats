@@ -4,8 +4,8 @@ Actions.
 
 <a href="https://github.com/cyber-eternal/github-stats">
 
-![](https://raw.githubusercontent.com/cyber-eternal/github-stats/output/generated/overview.svg)
-![](https://raw.githubusercontent.com/cyber-eternal/github-stats/output/generated/languages.svg)
+![](https://raw.githubusercontent.com/cyber-eternal/github-stats/generated/overview.svg)
+![](https://raw.githubusercontent.com/cyber-eternal/github-stats/generated/languages.svg)
 
 </a>
 
