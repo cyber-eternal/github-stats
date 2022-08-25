@@ -2,10 +2,10 @@
 > Generate visualizations of GitHub user and repository statistics using GitHub
 Actions.
 
-<a href="https://github.com/rahul-jha98/github-stats-transparent">
+<a href="https://github.com/cyber-eternal/github-stats">
 
-![](https://raw.githubusercontent.com/cyber-eternal/github-stats-transparent/output/generated/overview.svg)
-![](https://raw.githubusercontent.com/cyber-eternal/github-stats-transparent/output/generated/languages.svg)
+![](https://raw.githubusercontent.com/cyber-eternal/github-stats/output/generated/overview.svg)
+![](https://raw.githubusercontent.com/cyber-eternal/github-stats/output/generated/languages.svg)
 
 </a>
 
