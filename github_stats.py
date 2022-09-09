@@ -138,7 +138,7 @@ class Queries(object):
       }}
     }}
     repositoriesContributedTo(
-        first: 100,
+        first: 200,
         includeUserRepositories: false,
         orderBy: {{
             field: UPDATED_AT,
