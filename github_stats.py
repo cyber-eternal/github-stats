@@ -108,7 +108,7 @@ class Queries(object):
     login,
     name,
     repositories(
-        first: 100,
+        first: 200,
         orderBy: {{
             field: UPDATED_AT,
             direction: DESC
