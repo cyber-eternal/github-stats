@@ -99,10 +99,49 @@ class Queries(object):
 
     @staticmethod
     def repos_overview(contrib_cursor: Optional[str] = None,
-                       owned_cursor: Optional[str] = None) -> str:
+                       owned_cursor: Optional[str] = None,
+                       include_contributed: bool = True) -> str:
         """
         :return: GraphQL query with overview of user repositories
         """
+        contributed_block = f"""
+    repositoriesContributedTo(
+        first: 100,
+        includeUserRepositories: false,
+        orderBy: {{
+            field: UPDATED_AT,
+            direction: DESC
+        }}
+        contributionTypes: [
+            COMMIT,
+            PULL_REQUEST,
+            REPOSITORY,
+            PULL_REQUEST_REVIEW
+        ]
+        after: {"null" if contrib_cursor is None else '"'+ contrib_cursor +'"'}
+    ) {{
+      pageInfo {{
+        hasNextPage
+        endCursor
+      }}
+      nodes {{
+        nameWithOwner
+        stargazers {{
+          totalCount
+        }}
+        forkCount
+        languages(first: 10, orderBy: {{field: SIZE, direction: DESC}}) {{
+          edges {{
+            size
+            node {{
+              name
+              color
+            }}
+          }}
+        }}
+      }}
+    }}
+""" if include_contributed else ""
         return f"""{{
   viewer {{
     login,
@@ -137,42 +176,7 @@ class Queries(object):
         }}
       }}
     }}
-    repositoriesContributedTo(
-        first: 100,
-        includeUserRepositories: false,
-        orderBy: {{
-            field: UPDATED_AT,
-            direction: DESC
-        }},
-        contributionTypes: [
-            COMMIT,
-            PULL_REQUEST,
-            REPOSITORY,
-            PULL_REQUEST_REVIEW
-        ]
-        after: {"null" if contrib_cursor is None else '"'+ contrib_cursor +'"'}
-    ) {{
-      pageInfo {{
-        hasNextPage
-        endCursor
-      }}
-      nodes {{
-        nameWithOwner
-        stargazers {{
-          totalCount
-        }}
-        forkCount
-        languages(first: 10, orderBy: {{field: SIZE, direction: DESC}}) {{
-          edges {{
-            size
-            node {{
-              name
-              color
-            }}
-          }}
-        }}
-      }}
-    }}
+    {contributed_block}
   }}
 }}
 """
@@ -207,6 +211,20 @@ query {
         totalContributions
       }}
     }}
+"""
+
+    @classmethod
+    def contribs_for_year(cls, year: str) -> str:
+        """
+        :param year: year to get contributions for
+        :return: query to retrieve contribution information for a single year
+        """
+        return f"""
+query {{
+  viewer {{
+    {cls.contribs_by_year(year)}
+  }}
+}}
 """
 
     @classmethod
@@ -284,8 +302,10 @@ Languages:
         next_contrib = None
         while True:
             raw_results = await self.queries.query(
-                Queries.repos_overview(owned_cursor=next_owned,
-                                       contrib_cursor=next_contrib)
+                Queries.repos_overview(
+                    owned_cursor=next_owned,
+                    contrib_cursor=next_contrib,
+                    include_contributed=self._consider_forked_repos)
             )
             raw_results = raw_results if raw_results is not None else {}
 
@@ -450,11 +470,18 @@ Languages:
             .get("viewer", {}) \
             .get("contributionsCollection", {}) \
             .get("contributionYears", [])
-        by_year = (await self.queries.query(Queries.all_contribs(years))) \
-            .get("data", {}) \
-            .get("viewer", {}).values()
-        for year in by_year:
-            self._total_contributions += year \
+        # Query each year separately: a single request spanning all years
+        # can trip GitHub's GraphQL RESOURCE_LIMITS_EXCEEDED for accounts
+        # with a large contribution history.
+        results = await asyncio.gather(
+            *(self.queries.query(Queries.contribs_for_year(str(year)))
+              for year in years)
+        )
+        for result, year in zip(results, years):
+            self._total_contributions += result \
+                .get("data", {}) \
+                .get("viewer", {}) \
+                .get(f"year{year}", {}) \
                 .get("contributionCalendar", {}) \
                 .get("totalContributions", 0)
         return self._total_contributions
